@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
-const schema = mongoose.Schema;
-const listingSchema = new schema({
+const Review = require("./review.js");
+const Schema = mongoose.Schema;
+const listingSchema = new Schema({
     title:{
         type:String,
         required:true,
@@ -14,6 +15,19 @@ const listingSchema = new schema({
     price:Number,
     location:String,
     country:String,
+    reviews:[
+        {
+            type : Schema.Types.ObjectId,
+            ref:"Review"
+        }
+    ]
+})
+
+//mongoose middleware to handle deletion in n-many schema
+listingSchema.post("findOneAndDelete",async (listing)=>{
+    if(listing){
+        await Review.deleteMany({_id: {$in: listing.reviews}});
+    }
 })
 const Listing = new mongoose.model("Listing",listingSchema);
 module.exports = Listing;

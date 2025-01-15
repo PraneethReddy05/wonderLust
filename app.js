@@ -4,11 +4,12 @@ const port = 3000;
 const mongoose = require("mongoose");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
-const Listing = require("./models/listing.js");
+const Listing = require("./models/listing.js");//requiring listing model
+const Review = require("./models/review.js");//requiring review model
 const path = require("path");
 const wrapAsync = require("./utils/wrspAsync.js");
 const ExpressError = require("./utils/ExpressErrors.js");
-const listingSchema = require("./schema.js");
+const {listingSchema, reviewSchema}= require("./schema.js");//requiting joy schema for server side validation of Listings and reviews
 async function main() {
     await mongoose.connect('mongodb://127.0.0.1:27017/airbnb');
 }
@@ -30,6 +31,7 @@ app.get("/", (req, res) => {
     res.send("server successfully running");
 })
 
+//sunction(middleware) for serverside validation for listings
 const validatingListing = (req,res,next)=>{
     let {error} = listingSchema.validate(req.body);
     if(error){
@@ -39,6 +41,17 @@ const validatingListing = (req,res,next)=>{
         next();
     }
 }
+
+//function(middleware) for clientside validation of reviews
+const validatingReview = (req,res,next)=>{
+    let {error} = reviewSchema.validate(req.body);
+    if(error){
+        let msgErr = error.details.map((el)=>el.message).join(",");
+        throw new ExpressError(400,errMsg);
+    }else{
+        next();
+    }
+};
 
 //Index Route
 app.get("/listings", wrapAsync(async (req, res) => {
@@ -86,7 +99,7 @@ app.put("/listings/:id",validatingListing, wrapAsync(async (req, res) => {
 //Show Route
 app.get("/listings/:id", wrapAsync(async (req, res) => {
     let { id } = req.params;
-    let listing = await Listing.findById(id);
+    let listing = await Listing.findById(id).populate("reviews");
     res.render("show.ejs", { listing });
 }));
 
@@ -95,6 +108,29 @@ app.delete("/listings/:id", wrapAsync(async (req, res, next) => {
     let { id } = req.params;
     await Listing.findByIdAndDelete(id);
     res.redirect("/listings");
+}));
+
+
+//Reviews
+//Adding new review
+app.post("/listings/:id/reviews", validatingReview, wrapAsync(async(req,res)=>{
+    // console.log(req.body.review);
+    let listing = await Listing.findById(req.params.id);
+    let newReview = new Review(req.body.review);
+    listing.reviews.push(newReview);
+    await newReview.save();
+    await listing.save();
+    console.log(listing);
+    res.redirect(`/listings/${listing._id}`);
+    // console.log(newReview);
+}));
+
+//deleting a review
+app.delete("/listings/:id/reviews/:reviewId", wrapAsync(async(req,res)=>{
+    let { id, reviewId} = req.params;
+    await Listing.findByIdAndUpdate(id,{$pull:{reviews:reviewId}});
+    await Review.findByIdAndDelete(reviewId);
+    res.redirect(`/listings/${id}`);
 }));
 
 //404 status error
