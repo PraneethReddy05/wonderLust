@@ -23,7 +23,7 @@ const listingSchema = new Schema({
     ]
 })
 
-//mongoose middleware to handle deletion in n-many schema
+//mongoose middleware to handle deletion in n-to-many schema for reviews
 listingSchema.post("findOneAndDelete",async (listing)=>{
     if(listing){
         await Review.deleteMany({_id: {$in: listing.reviews}});
