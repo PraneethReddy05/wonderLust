@@ -8,12 +8,40 @@ const Listing = require("./models/listing.js");//requiring listing model
 const Review = require("./models/review.js");//requiring review model
 const path = require("path");
 const ExpressError = require("./utils/ExpressErrors.js");
+const session = require("express-session"); // npm package for sessions
+const flash = require("connect-flash"); // npm package for flash messages
+
+const sessionOptions = {
+    secret : "mysupersecretcode",
+    resave : false,
+    saveUninitialized : true,
+    cookie : {
+        expires : Date.now() * 1000*60*60*24*7,
+        maxAge : 1000*60*60*24*7,
+        httpOnly : true,
+    },
+}
+
+app.get("/", (req, res) => {
+    res.send("server successfully running");
+})
+
+//middleware for sessions
+app.use(session(sessionOptions));
+app.use(flash());
+
+app.use((req,res,next)=>{
+    res.locals.success = req.flash("success");
+    res.locals.error = req.flash("error");
+    next();
+})
 
 //Routers based on models
 //listing router
 const listings = require("./routes/listings.js");
 //reviews router
 const reviews = require("./routes/reviews.js");
+const cookieParser = require("cookie-parser");
 
 
 async function main() {
@@ -31,10 +59,6 @@ app.use(express.urlencoded({ extended: true }));// middleware for making data un
 app.use(express.json());
 app.use(methodOverride("_method"));
 app.engine('ejs', ejsMate);
-
-app.get("/", (req, res) => {
-    res.send("server successfully running");
-})
 
 //listings router 
 app.use("/listings",listings);
