@@ -8,8 +8,13 @@ const Listing = require("./models/listing.js");//requiring listing model
 const Review = require("./models/review.js");//requiring review model
 const path = require("path");
 const ExpressError = require("./utils/ExpressErrors.js");
+const cookieParser = require("cookie-parser");
 const session = require("express-session"); // npm package for sessions
 const flash = require("connect-flash"); // npm package for flash messages
+const passport = require("passport");
+const LocalStratagy = require("passport-local");
+const User = require("./models/user.js");
+
 
 const sessionOptions = {
     secret : "mysupersecretcode",
@@ -30,6 +35,13 @@ app.get("/", (req, res) => {
 app.use(session(sessionOptions));
 app.use(flash());
 
+//passport
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalStratagy(User.authenticate()));
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
 app.use((req,res,next)=>{
     res.locals.success = req.flash("success");
     res.locals.error = req.flash("error");
@@ -38,10 +50,12 @@ app.use((req,res,next)=>{
 
 //Routers based on models
 //listing router
-const listings = require("./routes/listings.js");
+const listingRouter = require("./routes/listings.js");
 //reviews router
-const reviews = require("./routes/reviews.js");
-const cookieParser = require("cookie-parser");
+const reviewRouter = require("./routes/reviews.js");
+//user router
+const userRouter = require("./routes/user.js");
+
 
 
 async function main() {
@@ -61,10 +75,13 @@ app.use(methodOverride("_method"));
 app.engine('ejs', ejsMate);
 
 //listings router 
-app.use("/listings",listings);
+app.use("/listings",listingRouter);
 
 //reviews router
-app.use("/listings/:id/reviews",reviews);
+app.use("/listings/:id/reviews",reviewRouter);
+
+//users router
+app.use("",userRouter);
 
 
 //404 status error
